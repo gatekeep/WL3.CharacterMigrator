@@ -38,6 +38,7 @@ namespace WL3.CharacterMigrator
         {
             System.Windows.Forms.Label srcPcCharactersLabel;
             System.Windows.Forms.Label dstPcCharactersLabel;
+            System.Windows.Forms.Label difficultLevelLabel;
             this.menuStrip = new System.Windows.Forms.MenuStrip();
             this.openToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -48,8 +49,10 @@ namespace WL3.CharacterMigrator
             this.selectReplacementButton = new System.Windows.Forms.Button();
             this.dstPcListView = new System.Windows.Forms.ListView();
             this.srcPcListView = new System.Windows.Forms.ListView();
+            this.difficultyComboBox = new System.Windows.Forms.ComboBox();
             srcPcCharactersLabel = new System.Windows.Forms.Label();
             dstPcCharactersLabel = new System.Windows.Forms.Label();
+            difficultLevelLabel = new System.Windows.Forms.Label();
             this.menuStrip.SuspendLayout();
             this.pcGroupBox.SuspendLayout();
             this.SuspendLayout();
@@ -121,9 +124,9 @@ namespace WL3.CharacterMigrator
             this.pcGroupBox.Controls.Add(this.dstPcListView);
             this.pcGroupBox.Controls.Add(srcPcCharactersLabel);
             this.pcGroupBox.Controls.Add(this.srcPcListView);
-            this.pcGroupBox.Location = new System.Drawing.Point(12, 27);
+            this.pcGroupBox.Location = new System.Drawing.Point(12, 54);
             this.pcGroupBox.Name = "pcGroupBox";
-            this.pcGroupBox.Size = new System.Drawing.Size(522, 343);
+            this.pcGroupBox.Size = new System.Drawing.Size(522, 342);
             this.pcGroupBox.TabIndex = 3;
             this.pcGroupBox.TabStop = false;
             // 
@@ -175,18 +178,43 @@ namespace WL3.CharacterMigrator
             this.srcPcListView.UseCompatibleStateImageBehavior = false;
             this.srcPcListView.View = System.Windows.Forms.View.Details;
             // 
+            // difficultLevelLabel
+            // 
+            difficultLevelLabel.AutoSize = true;
+            difficultLevelLabel.Location = new System.Drawing.Point(9, 30);
+            difficultLevelLabel.Name = "difficultLevelLabel";
+            difficultLevelLabel.Size = new System.Drawing.Size(79, 13);
+            difficultLevelLabel.TabIndex = 4;
+            difficultLevelLabel.Text = "Difficulty Level:";
+            // 
+            // difficultyComboBox
+            // 
+            this.difficultyComboBox.FormattingEnabled = true;
+            this.difficultyComboBox.Items.AddRange(new object[] {
+            "Rookie",
+            "Wastelander",
+            "Ranger",
+            "Super Jerk"});
+            this.difficultyComboBox.Location = new System.Drawing.Point(94, 27);
+            this.difficultyComboBox.Name = "difficultyComboBox";
+            this.difficultyComboBox.Size = new System.Drawing.Size(135, 21);
+            this.difficultyComboBox.TabIndex = 5;
+            this.difficultyComboBox.Text = "Wastelander";
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(545, 381);
+            this.ClientSize = new System.Drawing.Size(545, 408);
+            this.Controls.Add(this.difficultyComboBox);
+            this.Controls.Add(difficultLevelLabel);
             this.Controls.Add(this.pcGroupBox);
             this.Controls.Add(this.menuStrip);
             this.MainMenuStrip = this.menuStrip;
             this.MaximizeBox = false;
-            this.MaximumSize = new System.Drawing.Size(561, 420);
+            this.MaximumSize = new System.Drawing.Size(561, 447);
             this.MinimizeBox = false;
-            this.MinimumSize = new System.Drawing.Size(561, 420);
+            this.MinimumSize = new System.Drawing.Size(561, 447);
             this.Name = "MainForm";
             this.Text = "Wasteland 3 Character Migrator";
             this.menuStrip.ResumeLayout(false);
@@ -210,6 +238,7 @@ namespace WL3.CharacterMigrator
         private System.Windows.Forms.ListView dstPcListView;
         private System.Windows.Forms.ListView srcPcListView;
         private System.Windows.Forms.ToolStripMenuItem newGameToolStripMenuItem;
+        private System.Windows.Forms.ComboBox difficultyComboBox;
     }
 }
 

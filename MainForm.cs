@@ -20,6 +20,17 @@ namespace WL3.CharacterMigrator
     /// <summary>
     /// 
     /// </summary>
+    public enum DifficultyLevels
+    {
+        Rookie = 0,
+        Wastelander = 1,
+        Ranger = 2,
+        SuperJerk = 3
+    } // public enum DifficultyLevels
+
+    /// <summary>
+    /// 
+    /// </summary>
     public partial class MainForm : Form
     {
         private readonly string localSaveGamePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal),
@@ -39,6 +50,7 @@ namespace WL3.CharacterMigrator
         private string destSaveFile;
         private SaveData destSave;
 
+        private DifficultyLevels currentDifficulty;
         private Dictionary<string, string> charactersToMigrate = new Dictionary<string, string>();
 
         /**
@@ -52,11 +64,17 @@ namespace WL3.CharacterMigrator
         {
             InitializeComponent();
 
+            difficultyComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+
             // list view columns
             srcPcListView.Columns.Add("Display Name", -2, HorizontalAlignment.Left);
             srcPcListView.Columns.Add("Level", -2, HorizontalAlignment.Left);
             dstPcListView.Columns.Add("Display Name", -2, HorizontalAlignment.Left);
             dstPcListView.Columns.Add("Level", -2, HorizontalAlignment.Left);
+
+            // hook events
+            srcPcListView.ItemSelectionChanged += SrcPcListView_ItemSelectionChanged;
+            difficultyComboBox.SelectedIndexChanged += DifficultyComboBox_SelectedIndexChanged;
 
             Reset();
         }
@@ -210,9 +228,19 @@ namespace WL3.CharacterMigrator
 
             destSaveFile = ofd.FileName;
             destSavePath = Path.GetDirectoryName(destSaveFile);
+
+            if (destSaveFile == sourceSaveFile)
+            {
+                MessageBox.Show("Cannot open the source as the destination save!", this.Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Reset();
+                return;
+            }
+
             destSave = SaveData.Load(ofd.FileName);
 
             PopulateCharacters(destSave, ref destPCs, ref dstPcListView);
+            currentDifficulty = (DifficultyLevels)Convert.ToInt32(destSave["difficulty"].Value);
+            difficultyComboBox.SelectedIndex = (int)currentDifficulty;
 
             selectReplacementButton.Enabled = true;
             clearReplacementButton.Enabled = true;
@@ -275,20 +303,32 @@ namespace WL3.CharacterMigrator
                                 {
                                     string srcCharacterToReplaceWith = reverseCharactersToMigrate[displayName];
                                     pc.ReplaceWith(sourcePCs[srcCharacterToReplaceWith]);
+                                    pc = pcs.ElementAt(i);
 
                                     XElement dstRotation = destPCs[displayName].Element("rotation");
-                                    XElement dstPosition = destPCs[displayName].Element("position");
+                                    XElement rotation = pc.Element("rotation");
+                                    rotation.ReplaceWith(dstRotation);
 
-                                    pc.Element("rotation").ReplaceWith(dstRotation);
-                                    pc.Element("position").ReplaceWith(dstPosition);
+                                    XElement dstPosition = destPCs[displayName].Element("position");
+                                    XElement position = pc.Element("position");
+                                    position.ReplaceAll(dstPosition);
                                 }
                             }
                         }
                     }
                 }
 
+                // modify difficulty
+                destSave["difficulty"].Value = ((int)currentDifficulty).ToString();
+                if (currentDifficulty == DifficultyLevels.Ranger || currentDifficulty == DifficultyLevels.SuperJerk)
+                    destSave["friendlyFire"].Value = "true";
+                else
+                    destSave["friendlyFire"].Value = "false";
+
                 destSave.Save(sfd.FileName, out dataSize);
             }
+
+            Reset();
         }
 
         /// <summary>
@@ -419,6 +459,27 @@ namespace WL3.CharacterMigrator
             }
 
             charactersToMigrate.Remove(srcPcName);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void SrcPcListView_ItemSelectionChanged(object sender, ListViewItemSelectionChangedEventArgs e)
+        {
+            dstPcListView.SelectedItems.Clear();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void DifficultyComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            int selectedIdx = difficultyComboBox.SelectedIndex;
+            currentDifficulty = (DifficultyLevels)selectedIdx;
         }
     } // public partial class MainForm : Form
 } // namespace WL3.CharacterMigrator
