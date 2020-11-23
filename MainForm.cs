@@ -305,6 +305,9 @@ namespace WL3.CharacterMigrator
             destSaveFile = "New Game.xml";
 
             PopulateCharacters(destSave, ref destPCs, ref dstPcListView);
+
+            selectReplacementButton.Enabled = true;
+            clearReplacementButton.Enabled = true;
         }
 
         /// <summary>
