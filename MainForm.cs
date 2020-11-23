@@ -37,6 +37,7 @@ namespace WL3.CharacterMigrator
             Path.Combine("My Games", "Wasteland3", "Save Games"));
 
         private Dictionary<string, XElement> sourcePCs = new Dictionary<string, XElement>();
+        private List<string> sourceRosterPCs = new List<string>();
 
         private string sourceSavePath;
         private string sourceSaveFile;
@@ -45,6 +46,7 @@ namespace WL3.CharacterMigrator
         private bool newGamePlus = false;
 
         private Dictionary<string, XElement> destPCs = new Dictionary<string, XElement>();
+        private List<string> destRosterPCs = new List<string>();
 
         private string destSavePath;
         private string destSaveFile;
@@ -52,6 +54,7 @@ namespace WL3.CharacterMigrator
 
         private DifficultyLevels currentDifficulty;
         private Dictionary<string, string> charactersToMigrate = new Dictionary<string, string>();
+        private List<string> charactersToRoster = new List<string>();
 
         /**
          * Methods
@@ -69,8 +72,10 @@ namespace WL3.CharacterMigrator
             // list view columns
             srcPcListView.Columns.Add("Display Name", -2, HorizontalAlignment.Left);
             srcPcListView.Columns.Add("Level", -2, HorizontalAlignment.Left);
+            srcPcListView.Columns.Add("Rostered", -2, HorizontalAlignment.Left);
             dstPcListView.Columns.Add("Display Name", -2, HorizontalAlignment.Left);
             dstPcListView.Columns.Add("Level", -2, HorizontalAlignment.Left);
+            dstPcListView.Columns.Add("Rostered", -2, HorizontalAlignment.Left);
 
             // hook events
             srcPcListView.ItemSelectionChanged += SrcPcListView_ItemSelectionChanged;
@@ -126,6 +131,7 @@ namespace WL3.CharacterMigrator
             newGameToolStripMenuItem.Enabled = false;
 
             sourcePCs = new Dictionary<string, XElement>();
+            sourceRosterPCs = new List<string>();
             
             sourceSavePath = null;
             sourceSaveFile = null;
@@ -133,21 +139,26 @@ namespace WL3.CharacterMigrator
 
 
             destPCs = new Dictionary<string, XElement>();
+            destRosterPCs = new List<string>();
 
             destSavePath = null;
             destSaveFile = null;
             destSave = null;
+
+            charactersToMigrate = new Dictionary<string, string>();
+            charactersToRoster = new List<string>();
         }
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="save"></param>
-        /// <param name="listView"></param>
         /// <param name="pcList"></param>
-        private void PopulateCharacters(SaveData save, ref Dictionary<string, XElement> pcList, ref ListView listView)
+        /// <param name="rosterPcList"></param>
+        /// <param name="listView"></param>
+        private void PopulateCharacters(SaveData save, ref Dictionary<string, XElement> pcList, ref List<string> rosterPcList, ref ListView listView)
         {
-            // get data from the XML source
+            // get active PC data from the XML source
             XElement pcs = save["pcs"];
             foreach (XElement pc in pcs.Elements())
             {
@@ -162,6 +173,22 @@ namespace WL3.CharacterMigrator
                 }
             }
 
+            // get active PC data from the XML source
+            XElement rosterPcs = save["rosterpcs"];
+            foreach (XElement pc in rosterPcs.Elements())
+            {
+                if (pc != null)
+                {
+                    int companionId = Convert.ToInt32(pc.Element("companionId").Value);
+                    if (companionId == -1)
+                    {
+                        string displayName = pc.Element("displayName").Value;
+                        rosterPcList.Add(displayName);
+                        pcList.Add(displayName, pc);
+                    }
+                }
+            }
+
             // populate list view
             if (pcList.Count > 0)
             {
@@ -169,8 +196,9 @@ namespace WL3.CharacterMigrator
                 {
                     string displayName = pc.Key;
                     string level = pc.Value.Element("level").Value;
+                    bool isRostered = rosterPcList.Contains(displayName);
 
-                    listView.Items.Add(new ListViewItem(new string[] { displayName, level }));
+                    listView.Items.Add(new ListViewItem(new string[] { displayName, level, (isRostered ? "True" : "False") }));
                 }
             }
         }
@@ -208,7 +236,7 @@ namespace WL3.CharacterMigrator
             sourceSavePath = Path.GetDirectoryName(sourceSaveFile);
             sourceSave = SaveData.Load(ofd.FileName);
 
-            PopulateCharacters(sourceSave, ref sourcePCs, ref srcPcListView);
+            PopulateCharacters(sourceSave, ref sourcePCs, ref sourceRosterPCs, ref srcPcListView);
 
             //
             ofd = new OpenFileDialog();
@@ -238,7 +266,7 @@ namespace WL3.CharacterMigrator
 
             destSave = SaveData.Load(ofd.FileName);
 
-            PopulateCharacters(destSave, ref destPCs, ref dstPcListView);
+            PopulateCharacters(destSave, ref destPCs, ref destRosterPCs, ref dstPcListView);
             currentDifficulty = (DifficultyLevels)Convert.ToInt32(destSave["difficulty"].Value);
             difficultyComboBox.SelectedIndex = (int)currentDifficulty;
 
@@ -282,7 +310,7 @@ namespace WL3.CharacterMigrator
                 sourceSave.Save(sfd.FileName, out dataSize);
             else
             {
-                // update destination characters
+                // update destination characters being migrated
                 if (charactersToMigrate.Count > 0)
                 {
                     Dictionary<string, string> reverseCharactersToMigrate = new Dictionary<string, string>();
@@ -318,6 +346,17 @@ namespace WL3.CharacterMigrator
                     }
                 }
 
+                // update destination characters being rostered
+                if (charactersToRoster.Count > 0)
+                {
+                    XElement rosterPCs = destSave["rosterpcs"];
+                    foreach (string rosterCharacter in charactersToRoster)
+                    {
+                        XElement pc = sourcePCs[rosterCharacter];
+                        rosterPCs.Add(pc);
+                    }
+                }
+
                 // modify difficulty
                 destSave["difficulty"].Value = ((int)currentDifficulty).ToString();
                 if (currentDifficulty == DifficultyLevels.Ranger || currentDifficulty == DifficultyLevels.SuperJerk)
@@ -344,7 +383,7 @@ namespace WL3.CharacterMigrator
             destSave = SaveData.Load(templateSave);
             destSaveFile = "New Game.xml";
 
-            PopulateCharacters(destSave, ref destPCs, ref dstPcListView);
+            PopulateCharacters(destSave, ref destPCs, ref destRosterPCs, ref dstPcListView);
 
             selectReplacementButton.Enabled = true;
             clearReplacementButton.Enabled = true;
@@ -363,14 +402,39 @@ namespace WL3.CharacterMigrator
                 return;
             }
 
-            if (dstPcListView.SelectedItems.Count <= 0)
+            string srcPcName = srcPcListView.SelectedItems[0].Text;
+            if (charactersToMigrate.ContainsKey(srcPcName) || charactersToRoster.Contains(srcPcName))
             {
-                MessageBox.Show("Select a character to overwrite.", this.Text, MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                MessageBox.Show("Character already set to migrate or roster!", this.Text, MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 return;
             }
 
-            string srcPcName = srcPcListView.SelectedItems[0].Text;
+            if (dstPcListView.SelectedItems.Count <= 0)
+            {
+                if (!charactersToRoster.Contains(srcPcName))
+                {
+                    charactersToRoster.Add(srcPcName);
+
+                    string level = sourcePCs[srcPcName].Element("level").Value;
+                    dstPcListView.Items.Add(new ListViewItem(new string[] { srcPcName, level }));
+                }
+
+                return;
+            }
+
             string dstPcName = dstPcListView.SelectedItems[0].Text;
+            if (destRosterPCs.Contains(dstPcName))
+            {
+                if (!charactersToRoster.Contains(srcPcName))
+                {
+                    charactersToRoster.Add(srcPcName);
+
+                    string level = sourcePCs[srcPcName].Element("level").Value;
+                    dstPcListView.Items.Add(new ListViewItem(new string[] { srcPcName, level }));
+                }
+
+                return;
+            }
 
             if (!charactersToMigrate.ContainsKey(srcPcName))
             {
@@ -430,22 +494,45 @@ namespace WL3.CharacterMigrator
             string dstPcName = dstPcListView.SelectedItems[0].Text;
 
             string[] splitName = dstPcName.Split('(', ')');
-            if (splitName.Length <= 0)
-                return;
-
-            dstPcName = splitName[1];
-
-            foreach (KeyValuePair<string, string> kvp in charactersToMigrate)
+            if (splitName.Length > 1)
             {
-                if (kvp.Value == dstPcName)
+                dstPcName = splitName[1];
+
+                foreach (KeyValuePair<string, string> kvp in charactersToMigrate)
                 {
-                    srcPcName = kvp.Key;
-                    break;
+                    if (kvp.Value == dstPcName)
+                    {
+                        srcPcName = kvp.Key;
+                        break;
+                    }
                 }
             }
 
             if (srcPcName == null)
+            {
+                dstPcName = dstPcListView.SelectedItems[0].Text;
+
+                // is this a character to be rostered?
+                if (charactersToRoster.Contains(dstPcName))
+                {
+                    charactersToRoster.Remove(dstPcName);
+
+                    // update destination list view
+                    int idxToRemove = -1;
+                    foreach (ListViewItem item in dstPcListView.Items)
+                    {
+                        if (item.Text.Contains(dstPcName))
+                        {
+                            idxToRemove = item.Index;
+                            break;
+                        }
+                    }
+
+                    dstPcListView.Items.RemoveAt(idxToRemove);
+                }
+
                 return;
+            }
 
             // update destination list view
             foreach (ListViewItem item in dstPcListView.Items)
